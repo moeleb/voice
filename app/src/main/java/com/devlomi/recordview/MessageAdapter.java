@@ -136,12 +136,24 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             isPlaying = true;
             isPaused = false;
 
-            progressBar.setVisibility(View.VISIBLE);  // Show progress bar when playing
+            progressBar.setVisibility(View.VISIBLE);  // Make progress bar visible
             updateButtonIcon(true);
 
-            // Start progress bar update
             updateProgressBar();
         }
+
+        private void updateProgressBar() {
+            if (mediaPlayer != null && mediaPlayer.isPlaying()) {
+                final int currentPosition = mediaPlayer.getCurrentPosition();
+                int progress = (int) ((currentPosition / (float) mediaPlayer.getDuration()) * 100);
+                progressBar.setProgress(progress);
+                audioDurationText.setText(getFormattedDuration(currentPosition));
+
+                // Schedule the next update
+                handler.postDelayed(this::updateProgressBar, 1000);
+            }
+        }
+
 
         private void pauseAudio() {
             if (mediaPlayer != null && mediaPlayer.isPlaying()) {
@@ -149,7 +161,8 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                 isPlaying = false;
                 isPaused = true;
                 updateButtonIcon(false);
-                progressBar.setVisibility(View.GONE);  // Hide progress bar when paused
+
+                handler.removeCallbacks(this::updateProgressBar);
             }
         }
 
@@ -164,8 +177,10 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
             isPlaying = false;
             isPaused = false;
-            progressBar.setVisibility(View.GONE);  // Hide progress bar when stopped
+            progressBar.setProgress(0);
             updateButtonIcon(false);
+
+            handler.removeCallbacks(this::updateProgressBar); // Stop updating progress
         }
 
         private void updateButtonIcon(boolean playing) {
@@ -176,15 +191,6 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             }
         }
 
-        private void updateProgressBar() {
-            if (mediaPlayer != null && mediaPlayer.isPlaying()) {
-                final int currentPosition = mediaPlayer.getCurrentPosition();
-                progressBar.setProgress((int) ((currentPosition / (float) mediaPlayer.getDuration()) * 100));
-                audioDurationText.setText(getFormattedDuration(currentPosition));
-
-                handler.postDelayed(this::updateProgressBar, 1000); // Update progress every second
-            }
-        }
 
         public void releaseMediaPlayer() {
             stopAudio();
