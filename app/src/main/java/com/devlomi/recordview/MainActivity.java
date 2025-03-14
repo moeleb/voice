@@ -2,6 +2,8 @@ package com.devlomi.recordview;
 
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 
+import com.visualizer.amplitude.AudioRecordView;
+
 import android.Manifest;
 import android.media.MediaPlayer;
 import android.os.Build;
@@ -46,6 +48,9 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton sendButton;
     private File recordFile;
     private AudioRecorder audioRecorder;
+    private AudioRecordView audioRecordView; // Add this line
+    private android.os.Handler amplitudeHandler = new android.os.Handler();
+    private Runnable updateAmplitudeTask;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,6 +66,7 @@ public class MainActivity extends AppCompatActivity {
         recordView = findViewById(R.id.record_view);
         recordButton = findViewById(R.id.record_button);
         sendButton = findViewById(R.id.send_button);
+        audioRecordView = findViewById(R.id.audioRecordView);
         audioRecorder = new AudioRecorder();
 
         setupRecordView();
@@ -85,20 +91,31 @@ public class MainActivity extends AppCompatActivity {
                 recordFile = new File(getFilesDir(), UUID.randomUUID().toString() + ".3gp");
                 try {
                     audioRecorder.start(recordFile.getPath());
+
+                    if (audioRecordView != null) {
+                        audioRecordView.setVisibility(View.VISIBLE);
+                        startUpdatingAmplitude();  // Start updating waveform
+                    } else {
+                        Log.e("MainActivity", "AudioRecordView is null");
+                    }
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
                 Log.d("RecordView", "onStart");
             }
 
+
             @Override
             public void onCancel() {
                 stopRecording(true);
+                audioRecordView.setVisibility(View.GONE);
             }
 
             @Override
             public void onFinish(long recordTime, boolean limitReached) {
                 stopRecording(false);
+                audioRecordView.setVisibility(View.GONE); // Hide the waveform
+                audioRecordView.recreate();
 
                 File savedFile = saveRecordingToDirectory(recordFile);
                 long duration = getAudioDuration(savedFile);
@@ -115,9 +132,11 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
 
+
             @Override
             public void onLessThanSecond() {
                 stopRecording(true);
+                audioRecordView.setVisibility(View.GONE);
             }
 
             @Override
@@ -135,6 +154,21 @@ public class MainActivity extends AppCompatActivity {
             return granted;
         });
     }
+
+    private void startUpdatingAmplitude() {
+        updateAmplitudeTask = new Runnable() {
+            @Override
+            public void run() {
+                if (audioRecorder != null) {
+                    int amplitude = audioRecorder.getMaxAmplitude();
+                    audioRecordView.update(amplitude);
+                    amplitudeHandler.postDelayed(this, 100);
+                }
+            }
+        };
+        amplitudeHandler.post(updateAmplitudeTask); // Start loop
+    }
+
 
     private void setupEditText() {
         editTextMessage.addTextChangedListener(new TextWatcher() {
@@ -166,11 +200,14 @@ public class MainActivity extends AppCompatActivity {
 
     private void stopRecording(boolean deleteFile) {
         audioRecorder.stop();
+        audioRecordView.recreate();
+
         if (recordFile != null && recordFile.exists() && deleteFile) {
             recordFile.delete();
             Log.d("RecordingFinish", "Recording canceled and file deleted");
         }
     }
+
 
     private File saveRecordingToDirectory(File sourceFile) {
         File destDir = getRecordingDirectory();

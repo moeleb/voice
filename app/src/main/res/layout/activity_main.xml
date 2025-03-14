@@ -55,6 +55,24 @@
         android:layout_height="50dp"
         android:layout_alignParentBottom="true">
 
+        <!-- Audio visualization should be above the record button -->
+        <com.visualizer.amplitude.AudioRecordView
+            android:id="@+id/audioRecordView"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_centerVertical="true"
+            android:layout_toStartOf="@id/record_button"
+            android:layout_toLeftOf="@id/record_button"
+            app:chunkAlignTo="bottom"
+            app:chunkColor="@color/blue"
+            app:chunkMaxHeight="48dp"
+            app:chunkMinHeight="2dp"
+            app:chunkRoundedCorners="true"
+            app:chunkSoftTransition="true"
+            app:chunkSpace="1dp"
+            app:chunkWidth="2dp"
+            app:direction="leftToRight" />
+
         <com.devlomi.record_view.RecordView
             android:id="@+id/record_view"
             android:layout_width="match_parent"
@@ -99,7 +117,6 @@
             android:scaleType="centerInside"
             android:src="@drawable/recv_ic_send"
             android:visibility="gone" />
-
     </RelativeLayout>
 
 </RelativeLayout>

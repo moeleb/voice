@@ -41,4 +41,16 @@ public class AudioRecorder {
         mediaRecorder = null;
     }
 
+    public int getMaxAmplitude() {
+        if (mediaRecorder != null) {
+            try {
+                return mediaRecorder.getMaxAmplitude(); // Returns 0 if not recording.
+            } catch (IllegalStateException e) {
+                e.printStackTrace();
+            }
+        }
+        return 0;
+    }
+
+
 }
