@@ -2,6 +2,8 @@ package com.devlomi.recordview;
 
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 
+import static com.devlomi.recordview.AppConfig.amplitudeArrayList;
+
 import com.visualizer.amplitude.AudioRecordView;
 
 import android.Manifest;
@@ -48,9 +50,13 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton sendButton;
     private File recordFile;
     private AudioRecorder audioRecorder;
-    private AudioRecordView audioRecordView; // Add this line
+    private AudioRecordView audioRecordView;
     private android.os.Handler amplitudeHandler = new android.os.Handler();
     private Runnable updateAmplitudeTask;
+    private boolean isRecording = false;
+
+    // New variable to store the current amplitude
+    private int currentAmplitude = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -88,13 +94,14 @@ public class MainActivity extends AppCompatActivity {
         recordView.setOnRecordListener(new OnRecordListener() {
             @Override
             public void onStart() {
+                isRecording = true;
                 recordFile = new File(getFilesDir(), UUID.randomUUID().toString() + ".3gp");
                 try {
                     audioRecorder.start(recordFile.getPath());
 
                     if (audioRecordView != null) {
                         audioRecordView.setVisibility(View.VISIBLE);
-                        startUpdatingAmplitude();  // Start updating waveform
+                        startUpdatingAmplitude();
                     } else {
                         Log.e("MainActivity", "AudioRecordView is null");
                     }
@@ -104,17 +111,18 @@ public class MainActivity extends AppCompatActivity {
                 Log.d("RecordView", "onStart");
             }
 
-
             @Override
             public void onCancel() {
+                isRecording = false;
                 stopRecording(true);
                 audioRecordView.setVisibility(View.GONE);
             }
 
             @Override
             public void onFinish(long recordTime, boolean limitReached) {
+                isRecording = false;
                 stopRecording(false);
-                audioRecordView.setVisibility(View.GONE); // Hide the waveform
+                audioRecordView.setVisibility(View.GONE);
                 audioRecordView.recreate();
 
                 File savedFile = saveRecordingToDirectory(recordFile);
@@ -131,7 +139,6 @@ public class MainActivity extends AppCompatActivity {
                     Log.e("RecordingFinish", "File not found after saving!");
                 }
             }
-
 
             @Override
             public void onLessThanSecond() {
@@ -155,20 +162,28 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+
     private void startUpdatingAmplitude() {
         updateAmplitudeTask = new Runnable() {
             @Override
             public void run() {
-                if (audioRecorder != null) {
-                    int amplitude = audioRecorder.getMaxAmplitude();
-                    audioRecordView.update(amplitude);
+                if (audioRecorder != null && isRecording) {
+                    currentAmplitude = audioRecorder.getMaxAmplitude();
+                    amplitudeArrayList.add(currentAmplitude);
+                    Log.d("Amplitude", "Current amplitude: " + amplitudeArrayList);
+
+                    audioRecordView.update(currentAmplitude);
+
+                    if (messageAdapter != null) {
+                        messageAdapter.updateAmplitude(currentAmplitude);
+                    }
+
                     amplitudeHandler.postDelayed(this, 100);
                 }
             }
         };
-        amplitudeHandler.post(updateAmplitudeTask); // Start loop
+        amplitudeHandler.post(updateAmplitudeTask);
     }
-
 
     private void setupEditText() {
         editTextMessage.addTextChangedListener(new TextWatcher() {
@@ -207,7 +222,6 @@ public class MainActivity extends AppCompatActivity {
             Log.d("RecordingFinish", "Recording canceled and file deleted");
         }
     }
-
 
     private File saveRecordingToDirectory(File sourceFile) {
         File destDir = getRecordingDirectory();
@@ -259,5 +273,9 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
         return duration;
+    }
+
+    public int getCurrentAmplitude() {
+        return currentAmplitude;
     }
 }

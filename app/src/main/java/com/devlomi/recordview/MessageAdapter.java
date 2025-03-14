@@ -1,11 +1,14 @@
 package com.devlomi.recordview;
 
+import android.graphics.Color;
+import android.graphics.PorterDuff;
 import android.media.MediaPlayer;
 import android.os.Handler;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -59,6 +62,11 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         return messages.size();
     }
 
+    public void updateAmplitude(int amplitude) {
+
+
+    }
+
     public static class TextViewHolder extends RecyclerView.ViewHolder {
         private TextView messageText;
 
@@ -72,22 +80,34 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         }
     }
 
-    public static class AudioViewHolder extends RecyclerView.ViewHolder {
-
+    public class AudioViewHolder extends RecyclerView.ViewHolder {
         private Button playAudioButton;
         private TextView audioDurationText;
-        private ProgressBar progressBar;
+        private LinearLayout amplitudeLayout;
         private MediaPlayer mediaPlayer;
         private boolean isPlaying = false;
         private boolean isPaused = false;
         private File currentAudioFile;
         private Handler handler = new Handler();
+        private static final int NUM_BARS = 30; // Number of bars to display
+        private int progress = 0;
+        private int[] amplitudeValues = new int[NUM_BARS]; // Array to store amplitude values
 
         public AudioViewHolder(View itemView) {
             super(itemView);
             playAudioButton = itemView.findViewById(R.id.play_audio_button);
             audioDurationText = itemView.findViewById(R.id.audio_duration);
-            progressBar = itemView.findViewById(R.id.progress_bar);
+            amplitudeLayout = itemView.findViewById(R.id.amplitude_layout);
+
+            // Initialize the bars
+            for (int i = 0; i < NUM_BARS; i++) {
+                View bar = new View(itemView.getContext());
+                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, 20); // Adjust height as needed
+                params.weight = 1;
+                bar.setLayoutParams(params);
+                bar.setBackgroundColor(itemView.getContext().getResources().getColor(R.color.white)); // Initial color (color1)
+                amplitudeLayout.addView(bar);
+            }
         }
 
         public void bind(File audioFile, long audioDuration) {
@@ -102,9 +122,7 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                 }
             });
 
-            // Reset UI initially
             updateButtonIcon(false);
-            progressBar.setVisibility(View.GONE);  // Ensure progress bar is hidden initially
         }
 
         private void playAudio(File audioFile) {
@@ -136,71 +154,81 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             isPlaying = true;
             isPaused = false;
 
-            progressBar.setVisibility(View.VISIBLE);  // Make progress bar visible
             updateButtonIcon(true);
-
-            updateProgressBar();
+            updateBars();
         }
 
-        private void updateProgressBar() {
+        private void updateBars() {
             if (mediaPlayer != null && mediaPlayer.isPlaying()) {
-                final int currentPosition = mediaPlayer.getCurrentPosition();
-                int progress = (int) ((currentPosition / (float) mediaPlayer.getDuration()) * 100);
-                progressBar.setProgress(progress);
-                audioDurationText.setText(getFormattedDuration(currentPosition));
+                // Calculate progress and set amplitude values
+                final int progress = (int) ((mediaPlayer.getCurrentPosition() * 100) / mediaPlayer.getDuration());
+                setAmplitudeValues(progress);
 
-                // Schedule the next update
-                handler.postDelayed(this::updateProgressBar, 1000);
+                // Update the bars every 100ms
+                handler.postDelayed(this::updateBars, 100);
+            }
+        }
+
+        private void setAmplitudeValues(int progress) {
+            // Calculate the number of filled bars based on the progress
+            int filledBars = (int) ((progress / 100.0) * NUM_BARS);
+
+            for (int i = 0; i < NUM_BARS; i++) {
+                amplitudeValues[i] = (i < filledBars) ? 1 : 0; // 1 for filled, 0 for empty
+            }
+
+            updateBarColors(filledBars);
+        }
+
+        private void updateBarColors(int progress) {
+            // Calculate how many bars should be filled based on progress
+            int filledBars = (int) ((progress / 100.0) * NUM_BARS);
+
+            // Update each bar based on the filledBars count
+            for (int i = 0; i < NUM_BARS; i++) {
+                View bar = amplitudeLayout.getChildAt(i);
+
+                if (i < filledBars) {
+                    // Change color to red for filled bars
+                    bar.setBackgroundColor(itemView.getContext().getResources().getColor(R.color.red));
+                } else {
+                    // Keep the bar white if it hasn't been filled
+                    bar.setBackgroundColor(itemView.getContext().getResources().getColor(R.color.white));
+                }
             }
         }
 
 
-        private void pauseAudio() {
-            if (mediaPlayer != null && mediaPlayer.isPlaying()) {
-                mediaPlayer.pause();
-                isPlaying = false;
-                isPaused = true;
-                updateButtonIcon(false);
-
-                handler.removeCallbacks(this::updateProgressBar);
+        private void updateButtonIcon(boolean playing) {
+            if (playing) {
+                playAudioButton.setBackgroundResource(R.drawable.pause);
+            } else {
+                playAudioButton.setBackgroundResource(R.drawable.play);
             }
+        }
+
+        private String getFormattedDuration(long durationInMillis) {
+            int seconds = (int) (durationInMillis / 1000) % 60;
+            int minutes = (int) ((durationInMillis / 1000) / 60) % 60;
+            return String.format("%02d:%02d", minutes, seconds);
         }
 
         private void stopAudio() {
             if (mediaPlayer != null) {
-                if (mediaPlayer.isPlaying()) {
-                    mediaPlayer.stop();
-                }
-                mediaPlayer.release();
-                mediaPlayer = null;
-            }
-
-            isPlaying = false;
-            isPaused = false;
-            progressBar.setProgress(0);
-            updateButtonIcon(false);
-
-            handler.removeCallbacks(this::updateProgressBar); // Stop updating progress
-        }
-
-        private void updateButtonIcon(boolean playing) {
-            if (playing) {
-                playAudioButton.setBackgroundResource(R.drawable.pause); // your pause drawable
-            } else {
-                playAudioButton.setBackgroundResource(R.drawable.play); // your play drawable
+                mediaPlayer.pause();
+                mediaPlayer.seekTo(0);
+                isPlaying = false;
+                updateButtonIcon(false);
             }
         }
 
-
-        public void releaseMediaPlayer() {
-            stopAudio();
-        }
-
-        private String getFormattedDuration(long durationInMillis) {
-            int seconds = (int) (durationInMillis / 1000);
-            int minutes = seconds / 60;
-            seconds = seconds % 60;
-            return String.format("%02d:%02d", minutes, seconds);
+        private void pauseAudio() {
+            if (mediaPlayer != null) {
+                mediaPlayer.pause();
+                isPlaying = false;
+                isPaused = true;
+                updateButtonIcon(false);
+            }
         }
     }
 }
