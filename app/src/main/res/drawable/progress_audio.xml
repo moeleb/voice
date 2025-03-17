@@ -1,0 +1,17 @@
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Background (unfilled) -->
+    <item android:right="0dp">
+        <shape>
+            <solid android:color="@android:color/darker_gray"/>
+            <corners android:radius="4dp"/>
+        </shape>
+    </item>
+
+    <!-- Foreground (filled) -->
+    <item>
+        <shape>
+            <solid android:color="@color/colorAccent"/>
+            <corners android:radius="4dp"/>
+        </shape>
+    </item>
+</layer-list>

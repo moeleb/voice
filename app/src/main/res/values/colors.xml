@@ -7,5 +7,7 @@
     <color name="white">#FFFFFF</color>
     <color name="red">#FF0000</color>
     <color name="blue">#0000FF</color>
-
+    <color name="progress_background_color">#CCCCCC</color>
+    <color name="progress_foreground_color">#FF0000</color>
+    <color name="bar_color">#0000FF</color>
 </resources>
