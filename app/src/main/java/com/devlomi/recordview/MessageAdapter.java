@@ -19,7 +19,6 @@ import com.visualizer.amplitude.AudioRecordView;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.util.ArrayList;
 import java.util.List;
 
 public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
@@ -103,21 +102,31 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
             if (mediaPlayer == null) {
                 mediaPlayer = new MediaPlayer();
-                try {
-                    mediaPlayer.setDataSource(audioFile.getPath());
-                    mediaPlayer.prepare();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    Toast.makeText(itemView.getContext(), "Failed to play audio", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-
+            } else {
+                mediaPlayer.reset();
             }
+
+            try {
+                mediaPlayer.setDataSource(audioFile.getPath());
+                mediaPlayer.prepare();
+            } catch (IOException e) {
+                e.printStackTrace();
+                Toast.makeText(itemView.getContext(), "Failed to load audio", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+
             if (audioFile != null) {
+                audioRecordView.setVisibility(View.VISIBLE);
                 loadAmplitudeData();
             }
 
+            mediaPlayer.setOnCompletionListener(mp -> {
+                stopAudio();
+                audioRecordView.recreate();
+            });
             updateButtonIcon(false);
+
 
             playAudioButton.setOnClickListener(v -> {
                 if (isPlaying) {
@@ -129,57 +138,38 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         }
 
         private void loadAmplitudeData() {
-            if (mediaPlayer == null) {
-                Log.e("Amplitude", "MediaPlayer is not initialized.");
+            if (mediaPlayer == null || !mediaPlayer.isPlaying()) {
+                Log.e("Amplitude", "MediaPlayer is not initialized or not playing.");
                 return;
             }
 
             int currentPosition = mediaPlayer.getCurrentPosition();
             int duration = mediaPlayer.getDuration();
 
-            if (duration <= 0) {
-                Log.e("Amplitude", "Invalid duration.");
-                return;
+
+            if (duration > 0) {
+
+                int amplitudeArraySize = AppConfig.amplitudeArrayList.size();
+                int index = (int) ((currentPosition / (float) duration) * amplitudeArraySize);
+
+
+                if (index >= amplitudeArraySize) {
+                    index = amplitudeArraySize - 1;
+                }
+
+
+                int amplitude = AppConfig.amplitudeArrayList.get(index);
+                audioRecordView.update(amplitude);
             }
 
-            int amplitudeArraySize = AppConfig.amplitudeArrayList.size();
-            if (amplitudeArraySize == 0) {
-                Log.e("Amplitude", "Amplitude array is empty.");
-                return;
+
+            if (currentPosition >= duration) {
+                mediaPlayer.seekTo(0);
+                mediaPlayer.start();
+                AppConfig.amplitudeArrayList.clear();
+                audioRecordView.recreate();
+                loadAmplitudeData();
             }
-
-
-            int targetWidth = audioRecordView.getWidth();
-            if (targetWidth <= 0) {
-                Log.e("Amplitude", "Invalid AudioRecordView width.");
-                return;
-            }
-
-
-            List<Integer> normalizedAmplitudes = normalizeAmplitudes(AppConfig.amplitudeArrayList, targetWidth);
-
-
-            int index = (int) ((currentPosition / (float) duration) * normalizedAmplitudes.size());
-            index = Math.max(0, Math.min(index, normalizedAmplitudes.size() - 1));
-
-
-            int amplitude = normalizedAmplitudes.get(index);
-            audioRecordView.update(amplitude);
-        }
-
-        private List<Integer> normalizeAmplitudes(List<Integer> rawAmplitudes, int targetSize) {
-            List<Integer> normalized = new ArrayList<>();
-
-            int rawSize = rawAmplitudes.size();
-            if (rawSize == 0) return normalized;
-
-            for (int i = 0; i < targetSize; i++) {
-                int index = (int) (((float) i / targetSize) * rawSize);
-                index = Math.min(index, rawSize - 1);
-                normalized.add(rawAmplitudes.get(index));
-            }
-
-            return normalized;
         }
 
         private void playAudio(File audioFile) {
@@ -217,11 +207,23 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
         private void updateAudioProgress() {
             if (mediaPlayer != null && mediaPlayer.isPlaying()) {
-                loadAmplitudeData();
-                handler.postDelayed(this::updateAudioProgress, 50);
+                int currentPosition = mediaPlayer.getCurrentPosition();
+                int duration = mediaPlayer.getDuration();
+
+                if (duration > 0) {
+
+                    int progress = (int) ((currentPosition / (float) duration) * 100);
+
+
+                    loadAmplitudeData();
+
+
+                    handler.postDelayed(this::updateAudioProgress, 50);
+                } else {
+                    Log.e("AudioProgress", "Audio duration is zero or invalid.");
+                }
             }
         }
-
 
         private void pauseAudio() {
             if (mediaPlayer != null && mediaPlayer.isPlaying()) {

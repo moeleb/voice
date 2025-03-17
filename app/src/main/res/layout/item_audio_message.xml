@@ -42,8 +42,6 @@
                     android:id="@+id/progress_bar"
                     android:layout_width="match_parent"
                     android:layout_height="50dp"
-                    android:layout_centerHorizontal="true"
-                    android:layout_centerVertical="true"
                     app:chunkAlignTo="center"
                     app:chunkColor="@color/pink"
                     app:chunkMaxHeight="48dp"
@@ -53,6 +51,7 @@
                     app:chunkSpace="1dp"
                     app:chunkWidth="2dp"
                     app:direction="leftToRight" />
+
 
 
             </LinearLayout>
