@@ -121,10 +121,10 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                 loadAmplitudeData();
             }
 
-            mediaPlayer.setOnCompletionListener(mp -> {
-                stopAudio();
-                audioRecordView.recreate();
-            });
+//            mediaPlayer.setOnCompletionListener(mp -> {
+//                stopAudio();
+//                audioRecordView.recreate();
+//            });
             updateButtonIcon(false);
 
 
