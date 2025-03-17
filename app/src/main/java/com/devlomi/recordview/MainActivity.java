@@ -174,9 +174,9 @@ public class MainActivity extends AppCompatActivity {
 
                     audioRecordView.update(currentAmplitude);
 
-                    if (messageAdapter != null) {
-                        messageAdapter.updateAmplitude(currentAmplitude);
-                    }
+//                    if (messageAdapter != null) {
+//                        messageAdapter.updateAmplitude(currentAmplitude);
+//                    }
 
                     amplitudeHandler.postDelayed(this, 100);
                 }
