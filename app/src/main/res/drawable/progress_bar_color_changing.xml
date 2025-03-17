@@ -1,0 +1,10 @@
+<!-- res/drawable/progress_bar_color_changing.xml -->
+<animated-selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_enabled="true">
+        <animated-color xmlns:android="http://schemas.android.com/apk/res/android"
+            android:duration="1000"
+            android:repeatCount="infinite"
+            android:repeatMode="reverse"
+             />
+    </item>
+</animated-selector>

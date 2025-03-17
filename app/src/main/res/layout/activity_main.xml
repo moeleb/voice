@@ -60,10 +60,9 @@
             android:id="@+id/audioRecordView"
             android:layout_width="match_parent"
             android:layout_height="50dp"
+            android:layout_centerHorizontal="true"
             android:layout_centerVertical="true"
-            android:layout_toStartOf="@id/record_button"
-            android:layout_toLeftOf="@id/record_button"
-            app:chunkAlignTo="bottom"
+            app:chunkAlignTo="center"
             app:chunkColor="@color/blue"
             app:chunkMaxHeight="48dp"
             app:chunkMinHeight="2dp"
@@ -72,6 +71,7 @@
             app:chunkSpace="1dp"
             app:chunkWidth="2dp"
             app:direction="leftToRight" />
+
 
         <com.devlomi.record_view.RecordView
             android:id="@+id/record_view"

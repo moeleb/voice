@@ -54,6 +54,7 @@ public class MainActivity extends AppCompatActivity {
     private android.os.Handler amplitudeHandler = new android.os.Handler();
     private Runnable updateAmplitudeTask;
     private boolean isRecording = false;
+    private WaveformView waveformView;
 
     // New variable to store the current amplitude
     private int currentAmplitude = 0;

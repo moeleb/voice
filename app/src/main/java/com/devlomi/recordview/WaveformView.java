@@ -6,50 +6,35 @@ import android.graphics.Paint;
 import android.util.AttributeSet;
 import android.view.View;
 
-import java.util.List;
-
 public class WaveformView extends View {
-    private List<Integer> amplitudes;
-    private Paint playedPaint, unplayedPaint;
-    private int progress = 0;
+    private Paint paint;
+    private float[] amplitudes = new float[100];
 
     public WaveformView(Context context, AttributeSet attrs) {
         super(context, attrs);
-        init();
+        paint = new Paint();
+        paint.setColor(0xFF00FF00);
+        paint.setStrokeWidth(5f);
     }
 
-    private void init() {
-        playedPaint = new Paint();
-        playedPaint.setColor(0xFF4CAF50);
-
-        unplayedPaint = new Paint();
-        unplayedPaint.setColor(0xFFB0BEC5);
-    }
-
-    public void setAmplitudes(List<Integer> amplitudes) {
-        this.amplitudes = amplitudes;
-        invalidate();
-    }
-
-    public void setProgress(int progress) {
-        this.progress = progress;
+    public void updateWave(float amplitude) {
+        System.arraycopy(amplitudes, 1, amplitudes, 0, amplitudes.length - 1);
+        amplitudes[amplitudes.length - 1] = amplitude;
         invalidate();
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        if (amplitudes == null || amplitudes.isEmpty()) return;
+        float width = getWidth();
+        float height = getHeight();
+        float centerY = height / 2;
+        float spacing = width / (amplitudes.length + 1);
 
-        int width = getWidth();
-        int height = getHeight();
-        int barWidth = width / amplitudes.size();
-
-        for (int i = 0; i < amplitudes.size(); i++) {
-            int ampHeight = (int) ((amplitudes.get(i) / 32768.0) * height);
-
-            Paint paint = (i * 100 / amplitudes.size() <= progress) ? playedPaint : unplayedPaint;
-            canvas.drawRect(i * barWidth, height - ampHeight, (i + 1) * barWidth, height, paint);
+        for (int i = 0; i < amplitudes.length; i++) {
+            float x = i * spacing;
+            float y = centerY - amplitudes[i] * centerY;
+            canvas.drawLine(x, centerY, x, y, paint);
         }
     }
 }
