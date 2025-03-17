@@ -94,6 +94,14 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             currentAudioFile = audioFile;
             audioDurationText.setText(getFormattedDuration(audioDuration));
 
+
+            progressBar.setVisibility(View.VISIBLE);
+            progressBar.setProgress(0);
+
+
+            updateButtonIcon(false);
+
+
             playAudioButton.setOnClickListener(v -> {
                 if (isPlaying) {
                     pauseAudio();
@@ -102,10 +110,10 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                 }
             });
 
-            // Reset UI initially
-            updateButtonIcon(false);
-            progressBar.setVisibility(View.GONE);  // Ensure progress bar is hidden initially
+
+            progressBar.setProgress(0);
         }
+
 
         private void playAudio(File audioFile) {
             if (audioFile == null || !audioFile.exists()) {
@@ -136,7 +144,7 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             isPlaying = true;
             isPaused = false;
 
-            progressBar.setVisibility(View.VISIBLE);  // Make progress bar visible
+            progressBar.setVisibility(View.VISIBLE);
             updateButtonIcon(true);
 
             updateProgressBar();
@@ -144,16 +152,15 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
         private void updateProgressBar() {
             if (mediaPlayer != null && mediaPlayer.isPlaying()) {
-                final int currentPosition = mediaPlayer.getCurrentPosition();
+                int currentPosition = mediaPlayer.getCurrentPosition();
                 int progress = (int) ((currentPosition / (float) mediaPlayer.getDuration()) * 100);
-                progressBar.setProgress(progress);
-                audioDurationText.setText(getFormattedDuration(currentPosition));
 
-                // Schedule the next update
-                handler.postDelayed(this::updateProgressBar, 1000);
+                progressBar.setProgress(progress);
+
+
+                handler.postDelayed(this::updateProgressBar, 500);
             }
         }
-
 
         private void pauseAudio() {
             if (mediaPlayer != null && mediaPlayer.isPlaying()) {
@@ -180,14 +187,14 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             progressBar.setProgress(0);
             updateButtonIcon(false);
 
-            handler.removeCallbacks(this::updateProgressBar); // Stop updating progress
+            handler.removeCallbacks(this::updateProgressBar);
         }
 
         private void updateButtonIcon(boolean playing) {
             if (playing) {
-                playAudioButton.setBackgroundResource(R.drawable.pause); // your pause drawable
+                playAudioButton.setBackgroundResource(R.drawable.pause);
             } else {
-                playAudioButton.setBackgroundResource(R.drawable.play); // your play drawable
+                playAudioButton.setBackgroundResource(R.drawable.play);
             }
         }
 
