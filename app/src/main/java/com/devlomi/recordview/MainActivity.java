@@ -168,6 +168,7 @@ public class MainActivity extends AppCompatActivity {
         updateAmplitudeTask = new Runnable() {
             @Override
             public void run() {
+                // Removed the clearing of amplitudeArrayList
                 if (audioRecorder != null && isRecording) {
                     currentAmplitude = audioRecorder.getMaxAmplitude();
                     amplitudeArrayList.add(currentAmplitude);
@@ -175,16 +176,13 @@ public class MainActivity extends AppCompatActivity {
 
                     audioRecordView.update(currentAmplitude);
 
-//                    if (messageAdapter != null) {
-//                        messageAdapter.updateAmplitude(currentAmplitude);
-//                    }
-
-                    amplitudeHandler.postDelayed(this, 100);
+                    amplitudeHandler.postDelayed(this, 100); // Continue updating every 100ms
                 }
             }
         };
         amplitudeHandler.post(updateAmplitudeTask);
     }
+
 
     private void setupEditText() {
         editTextMessage.addTextChangedListener(new TextWatcher() {

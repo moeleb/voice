@@ -1,7 +1,9 @@
 package com.devlomi.recordview;
 
+import android.graphics.Color;
 import android.media.MediaPlayer;
 import android.os.Handler;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,8 +14,12 @@ import android.widget.Toast;
 
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.visualizer.amplitude.AudioRecordView;
+
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.List;
 
 public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
@@ -72,11 +78,11 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         }
     }
 
-    public static class AudioViewHolder extends RecyclerView.ViewHolder {
+    public class AudioViewHolder extends RecyclerView.ViewHolder {
 
         private Button playAudioButton;
         private TextView audioDurationText;
-        private ProgressBar progressBar;
+        private AudioRecordView audioRecordView;
         private MediaPlayer mediaPlayer;
         private boolean isPlaying = false;
         private boolean isPaused = false;
@@ -87,7 +93,7 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             super(itemView);
             playAudioButton = itemView.findViewById(R.id.play_audio_button);
             audioDurationText = itemView.findViewById(R.id.audio_duration);
-            progressBar = itemView.findViewById(R.id.progress_bar);
+            audioRecordView = itemView.findViewById(R.id.progress_bar);
         }
 
         public void bind(File audioFile, long audioDuration) {
@@ -95,12 +101,23 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             audioDurationText.setText(getFormattedDuration(audioDuration));
 
 
-            progressBar.setVisibility(View.VISIBLE);
-            progressBar.setProgress(0);
+            if (mediaPlayer == null) {
+                mediaPlayer = new MediaPlayer();
+                try {
+                    mediaPlayer.setDataSource(audioFile.getPath());
+                    mediaPlayer.prepare();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    Toast.makeText(itemView.getContext(), "Failed to play audio", Toast.LENGTH_SHORT).show();
+                    return;
+                }
 
+            }
+            if (audioFile != null) {
+                loadAmplitudeData();
+            }
 
             updateButtonIcon(false);
-
 
             playAudioButton.setOnClickListener(v -> {
                 if (isPlaying) {
@@ -109,11 +126,61 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                     playAudio(currentAudioFile);
                 }
             });
-
-
-            progressBar.setProgress(0);
         }
 
+        private void loadAmplitudeData() {
+            if (mediaPlayer == null) {
+                Log.e("Amplitude", "MediaPlayer is not initialized.");
+                return;
+            }
+
+            int currentPosition = mediaPlayer.getCurrentPosition();
+            int duration = mediaPlayer.getDuration();
+
+            if (duration <= 0) {
+                Log.e("Amplitude", "Invalid duration.");
+                return;
+            }
+
+            int amplitudeArraySize = AppConfig.amplitudeArrayList.size();
+            if (amplitudeArraySize == 0) {
+                Log.e("Amplitude", "Amplitude array is empty.");
+                return;
+            }
+
+
+            int targetWidth = audioRecordView.getWidth();
+            if (targetWidth <= 0) {
+                Log.e("Amplitude", "Invalid AudioRecordView width.");
+                return;
+            }
+
+
+            List<Integer> normalizedAmplitudes = normalizeAmplitudes(AppConfig.amplitudeArrayList, targetWidth);
+
+
+            int index = (int) ((currentPosition / (float) duration) * normalizedAmplitudes.size());
+            index = Math.max(0, Math.min(index, normalizedAmplitudes.size() - 1));
+
+
+            int amplitude = normalizedAmplitudes.get(index);
+            audioRecordView.update(amplitude);
+        }
+
+        private List<Integer> normalizeAmplitudes(List<Integer> rawAmplitudes, int targetSize) {
+            List<Integer> normalized = new ArrayList<>();
+
+            int rawSize = rawAmplitudes.size();
+            if (rawSize == 0) return normalized;
+
+            for (int i = 0; i < targetSize; i++) {
+                int index = (int) (((float) i / targetSize) * rawSize);
+                index = Math.min(index, rawSize - 1);
+                normalized.add(rawAmplitudes.get(index));
+            }
+
+            return normalized;
+        }
 
         private void playAudio(File audioFile) {
             if (audioFile == null || !audioFile.exists()) {
@@ -133,34 +200,28 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                 }
 
                 mediaPlayer.setOnCompletionListener(mp -> stopAudio());
+            } else {
+                mediaPlayer.seekTo(0);
             }
 
-            if (isPaused) {
-                mediaPlayer.start();
-            } else {
-                mediaPlayer.start();
-            }
+            mediaPlayer.start();
+
 
             isPlaying = true;
             isPaused = false;
 
-            progressBar.setVisibility(View.VISIBLE);
             updateButtonIcon(true);
-
-            updateProgressBar();
+            updateAudioProgress();
         }
 
-        private void updateProgressBar() {
+
+        private void updateAudioProgress() {
             if (mediaPlayer != null && mediaPlayer.isPlaying()) {
-                int currentPosition = mediaPlayer.getCurrentPosition();
-                int progress = (int) ((currentPosition / (float) mediaPlayer.getDuration()) * 100);
-
-                progressBar.setProgress(progress);
-
-
-                handler.postDelayed(this::updateProgressBar, 500);
+                loadAmplitudeData();
+                handler.postDelayed(this::updateAudioProgress, 50);
             }
         }
+
 
         private void pauseAudio() {
             if (mediaPlayer != null && mediaPlayer.isPlaying()) {
@@ -169,7 +230,7 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                 isPaused = true;
                 updateButtonIcon(false);
 
-                handler.removeCallbacks(this::updateProgressBar);
+                handler.removeCallbacks(this::updateAudioProgress);
             }
         }
 
@@ -184,10 +245,9 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
             isPlaying = false;
             isPaused = false;
-            progressBar.setProgress(0);
             updateButtonIcon(false);
 
-            handler.removeCallbacks(this::updateProgressBar);
+            handler.removeCallbacks(this::updateAudioProgress);
         }
 
         private void updateButtonIcon(boolean playing) {
@@ -198,11 +258,6 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             }
         }
 
-
-        public void releaseMediaPlayer() {
-            stopAudio();
-        }
-
         private String getFormattedDuration(long durationInMillis) {
             int seconds = (int) (durationInMillis / 1000);
             int minutes = seconds / 60;
@@ -210,4 +265,6 @@ public class MessageAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             return String.format("%02d:%02d", minutes, seconds);
         }
     }
+
+
 }

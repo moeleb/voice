@@ -9,5 +9,6 @@
     <color name="blue">#0000FF</color>
     <color name="bar_active_color">#FF0000</color>
     <color name="bar_inactive_color">#DDDDDD</color>
+    <color name="pink">#FF69B4</color>
 
 </resources>
