@@ -32,7 +32,7 @@ public class RecordView extends RelativeLayout implements RecordLockViewListener
 
     public static final int DEFAULT_CANCEL_BOUNDS = 8; //8dp
     private ImageView smallBlinkingMic, basketImg;
-    private Chronometer counterTime;
+    public Chronometer counterTime;
     private TextView slideToCancel, cancelTextView;
     private ShimmerLayout slideToCancelLayout;
     private ImageView arrow;
@@ -55,6 +55,7 @@ public class RecordView extends RelativeLayout implements RecordLockViewListener
     private Runnable runnable;
     private Handler handler;
     private RecordButton recordButton;
+    private long pauseOffset = 0; // Add this to track time offset
 
     private boolean canRecord = true;
 
@@ -166,6 +167,20 @@ public class RecordView extends RelativeLayout implements RecordLockViewListener
             cancelAndDeleteRecord();
         });
 
+    }
+
+    public void pauseCounter() {
+        if (counterTime != null) {
+            pauseOffset = SystemClock.elapsedRealtime() - counterTime.getBase();
+            counterTime.stop();
+        }
+    }
+
+    public void resumeCounter() {
+        if (counterTime != null) {
+            counterTime.setBase(SystemClock.elapsedRealtime() - pauseOffset);
+            counterTime.start();
+        }
     }
 
     private void cancelAndDeleteRecord() {

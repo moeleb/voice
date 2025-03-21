@@ -12,11 +12,9 @@ import android.view.animation.AccelerateDecelerateInterpolator;
 public class ScaleAnim {
     private View view;
     private float scaleUpTo = 2.0f;
-
     public ScaleAnim(View view) {
         this.view = view;
     }
-
     public void setScaleUpTo(float scaleUpTo) {
         this.scaleUpTo = scaleUpTo;
     }

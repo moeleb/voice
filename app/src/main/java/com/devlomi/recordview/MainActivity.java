@@ -47,7 +47,7 @@ public class MainActivity extends AppCompatActivity {
     private EditText editTextMessage;
     private RecordView recordView;
     private RecordButton recordButton;
-    private ImageButton sendButton;
+    private ImageButton sendButton, pauseButton; // Add pause button
     private File recordFile;
     private AudioRecorder audioRecorder;
     private AudioRecordView audioRecordView;
@@ -55,7 +55,7 @@ public class MainActivity extends AppCompatActivity {
     private Runnable updateAmplitudeTask;
     private boolean isRecording = false;
     private WaveformView waveformView;
-
+    private boolean isPaused = false;
     // New variable to store the current amplitude
     private int currentAmplitude = 0;
 
@@ -63,6 +63,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        pauseButton = findViewById(R.id.pause_resume_button);
 
         recyclerView = findViewById(R.id.messagesRecyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -95,6 +96,8 @@ public class MainActivity extends AppCompatActivity {
         recordView.setOnRecordListener(new OnRecordListener() {
             @Override
             public void onStart() {
+                pauseButton.setVisibility(View.GONE);
+
                 isRecording = true;
                 recordFile = new File(getFilesDir(), UUID.randomUUID().toString() + ".3gp");
                 try {
@@ -112,8 +115,9 @@ public class MainActivity extends AppCompatActivity {
                 Log.d("RecordView", "onStart");
             }
 
-            @Override
             public void onCancel() {
+                pauseButton.setVisibility(View.GONE);
+
                 isRecording = false;
                 stopRecording(true);
                 audioRecordView.setVisibility(View.GONE);
@@ -121,6 +125,10 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onFinish(long recordTime, boolean limitReached) {
+                // Hide the pause button during the finish phase
+                pauseButton.setVisibility(View.GONE);
+
+                // Existing code for handling the finish phase
                 isRecording = false;
                 stopRecording(false);
                 audioRecordView.setVisibility(View.GONE);
@@ -149,8 +157,28 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onLock() {
-                Log.d("RecordView", "onLock");
+                pauseButton.setVisibility(View.VISIBLE);
+
+                pauseButton.setOnClickListener(v -> {
+                    if (isPaused) {
+                        try {
+                            resumeRecording();
+                            recordView.resumeCounter(); // Resume the timer!
+                            pauseButton.setImageDrawable(getResources().getDrawable(R.drawable.pause));
+                            isPaused = false;
+                        } catch (IOException e) {
+                            Log.e("MainActivity", "Error while resuming recording: " + e.getMessage());
+                        }
+                    } else {
+                        pauseRecording();
+                        recordView.pauseCounter(); // Pause the timer!
+                        pauseButton.setImageDrawable(getResources().getDrawable(R.drawable.play));
+                        isPaused = true;
+                    }
+                });
             }
+
+
         });
 
         recordView.setRecordPermissionHandler(() -> {
@@ -161,6 +189,23 @@ public class MainActivity extends AppCompatActivity {
             }
             return granted;
         });
+    }
+
+    private void pauseRecording() {
+        if (audioRecorder != null && isRecording) {
+            audioRecorder.stop();
+            isPaused = true;
+            Toast.makeText(this, "Recording Paused", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void resumeRecording() throws IOException {
+        if (isPaused) {
+            File newFile = new File(getFilesDir(), UUID.randomUUID().toString() + ".3gp");
+            audioRecorder.start(newFile.getPath()); // Start new recording
+            isPaused = false;
+            Toast.makeText(this, "Recording Resumed", Toast.LENGTH_SHORT).show();
+        }
     }
 
 
